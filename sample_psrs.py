@@ -162,6 +162,64 @@ def fake_model_2a(psrs, rn='uniform', crn='uniform'):
     return pta
 
 
+def fake_model_2a_no_tm(psrs, rn='uniform', crn='uniform'):
+    # Find maximum time span to set GW freq sampling
+    tmin = [p.toas.min() for p in psrs]
+    tmax = [p.toas.max() for p in psrs]
+    Tspan = np.max(tmax) - np.min(tmin)
+
+    # define selection by observing backend
+    selection = selections.Selection(selections.by_backend)
+
+    # white noise parameters:
+    efac = parameter.Constant(1)
+
+    # red noise parameters
+    if rn == 'linearexp':
+        log10_A = parameter.LinearExp(-20, -11)
+    elif rn == 'uniform':
+        log10_A = parameter.Uniform(-20, -11)
+    else:
+        print('uniform and linearexp are the only options for red noise right now.')
+    gamma = parameter.Uniform(0, 7)
+
+    # GW red noise parameters
+    if crn == 'linearexp':
+        log10_A_gw = parameter.LinearExp(-20, -12)('log10_A_gw')
+    elif crn == 'uniform':
+        log10_A_gw = parameter.Uniform(-20, -12)('log10_A_gw')
+    else:
+        print('uniform and linearexp are the only options for red noise right now.')
+    gamma_gw = parameter.Constant(4.33)('gamma_gw')
+
+    # white noise
+    ef = white_signals.MeasurementNoise(efac=efac, selection=selection)
+
+    # red noise (pl with 30 frequencies)
+    pl = utils.powerlaw(log10_A=log10_A, gamma=gamma)
+    rn = gp_signals.FourierBasisGP(spectrum=pl, components=30, Tspan=Tspan)
+
+    # common red noise (pl with 30 frequencies)
+    cpl = utils.powerlaw(log10_A=log10_A_gw, gamma=gamma_gw)
+    gw = gp_signals.FourierBasisGP(spectrum=cpl, components=30, Tspan=Tspan, name='gw')
+
+    # timing model
+    tm = gp_signals.TimingModel(use_svd=True)
+
+    
+    # total model
+    s = ef + rn + gw # + tm
+
+    # initialize PTA
+    models = []
+    
+    for p in psrs:
+        models.append(s(p))
+
+    pta = signal_base.PTA(models)
+    return pta
+
+
 def sample_odds_single(psrs, psr_num, amp, trial, num_points=2e5, neff=10000):
     print('Working on single pulsar number {0}.'.format(psr_num))
     outdir = './odds_sngl/fakes_amp_{0}_trial_{1}/{2}'.format(amp, trial, psrs[psr_num].name)

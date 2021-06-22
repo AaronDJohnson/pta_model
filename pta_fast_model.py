@@ -12,6 +12,9 @@ class FastLogLikelihood(object):
     """
     def __init__(self, pta, psrs):
         self.pta = pta
+        for key in pta.signals:
+            if 'timing_model' in key:
+                raise Exception("Timing model detected in PTA object. Remove timing model to continue.")
         # get arrays of N and M, residuals
         N = pta.get_ndiag()
         N_inv = [np.diag(N**(-1)) for N in N]
