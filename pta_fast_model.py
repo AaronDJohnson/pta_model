@@ -79,6 +79,7 @@ class FastLogLikelihood(object):
             loglike += 0.5 * (np.dot(FDr, expval) - logdet_sigma - logdet_phi)
 
         else:
+            print('else triggered')
             for FDr, FDF, pl in zip(self.FDrs, self.FDFs, phiinvs):
                 if FDr is None:
                     continue
