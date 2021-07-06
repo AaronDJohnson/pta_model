@@ -59,6 +59,7 @@ class FastLogLikelihood(object):
 
     def __call__(self, xs, phiinv_method='cliques'):
         params = xs if isinstance(xs, dict) else self.pta.map_params(xs)
+        # params = xs
 
         loglike = self.lnlikelihood0
 

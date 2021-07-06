@@ -7,14 +7,17 @@ from sksparse.cholmod import cholesky
 
 class FastLogLikelihood(object):
     """
-    FOR USE WITH RED NOISE ONLY (common signals are required)
-    Don't include the timing model. Seriously. Don't.
+    FOR USE WITH RED NOISE ONLY
+    Don't include the timing model.
+    Don't include varying white noise parameters.
     """
     def __init__(self, pta, psrs):
         self.pta = pta
         for key in pta.signals:
             if 'timing_model' in key:
                 raise Exception("Timing model detected in PTA object. Remove timing model to continue.")
+            # if 'EQUAD' or 'ECORR' in key:
+            #     raise Exception("White noise parameters detected in PTA object. Remove varying white noise to continue.")
         # get arrays of N and M, residuals
         N = pta.get_ndiag()
         N_inv = [np.diag(N**(-1)) for N in N]
@@ -29,12 +32,13 @@ class FastLogLikelihood(object):
         self.FDFs = []
         self.FDrs = []
 
-        logdet_Ds = []
-        rDrs = []
+        self.logdet_Ds = []
+        self.rDrs = []
 
         for ii in range(len(psrs)):
             left_mult = np.matmul(N_inv[ii], Mmat[ii])
             # S is the matrix to be inverted and its determinant found (if we want to use this)
+            
             S = np.matmul(Mmat[ii].T, np.matmul(N_inv[ii], Mmat[ii]))
             cf = np.linalg.cholesky(S)
             c = np.linalg.solve(cf, np.identity(S.shape[0]))
@@ -46,13 +50,13 @@ class FastLogLikelihood(object):
             self.FDFs.append(np.matmul(self.F[ii].T, np.matmul(Di, self.F[ii])))
             self.FDrs.append(np.matmul(self.F[ii].T, np.matmul(Di, self.r[ii])))
 
-            rDrs.append(np.matmul(self.r[ii].T, np.matmul(self.D_inv[ii], self.r[ii])))
+            self.rDrs.append(np.matmul(self.r[ii].T, np.matmul(self.D_inv[ii], self.r[ii])))
             logdet_E = Mmat[ii].shape[1] * np.log(1e40)
-            logdet_Ds.append(logdet_S + np.sum(np.log(N[ii])) + logdet_E)
+            self.logdet_Ds.append(logdet_S + np.sum(np.log(N[ii])) + logdet_E)
 
         self.lnlikelihood0 = 0
-        for ii in range(len(rDrs)):
-            self.lnlikelihood0 += -0.5 * rDrs[ii] - 0.5 * logdet_Ds[ii]
+        for ii in range(len(self.rDrs)):
+            self.lnlikelihood0 += -0.5 * self.rDrs[ii] - 0.5 * self.logdet_Ds[ii]
 
     def _make_sigma(FDFs, phiinv):
         return sps.block_diag(FDFs, "csc") + sps.csc_matrix(phiinv)
@@ -65,7 +69,7 @@ class FastLogLikelihood(object):
         phiinvs = self.pta.get_phiinv(params, logdet=True, method=phiinv_method)
 
         if self.pta._commonsignals:
-            print('common signals triggered')
+            # This happens for correlations
             phiinv, logdet_phi = phiinvs
             Sigma = self._make_sigma(self.FDFs, phiinv)
             FDr = np.concatenate(self.FDrs)
@@ -79,7 +83,7 @@ class FastLogLikelihood(object):
             loglike += 0.5 * (np.dot(FDr, expval) - logdet_sigma - logdet_phi)
 
         else:
-            print('else triggered')
+            # This happens for anything that doesn't include correlations
             for FDr, FDF, pl in zip(self.FDrs, self.FDFs, phiinvs):
                 if FDr is None:
                     continue

@@ -12,7 +12,6 @@ def make_D_inv(N_inv, M):
     c = np.linalg.solve(cf, np.identity(S.shape[0]))
     S_inv = np.dot(c.T, c)
     logdet_S = np.sum(2 * np.log(np.diag(cf)))
-
     D_inv = N_inv - np.matmul(A, np.matmul(S_inv, B))
     return logdet_S, S, D_inv
 
@@ -57,7 +56,8 @@ class FastLogLikelihood():
         self.b = np.identity(60)
         rDr = get_rDr(self.res, self.D_inv)
         self.lnlike0 = -0.5 * rDr
-        self.logdet_D = self.logdet_S + np.sum(np.log(self.wnoise_mat))
+        logdet_E = self.norm_tmatrix.shape[1] * np.log(1e40)
+        self.logdet_D = self.logdet_S + np.sum(np.log(self.wnoise_mat)) + logdet_E
 
 
     def __call__(self, x):
