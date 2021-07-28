@@ -40,15 +40,15 @@ class FastLogLikelihood(object):
             c = np.linalg.solve(cf, np.identity(S.shape[0]))
             S_inv = np.dot(c.T, c)
             logdet_S = np.sum(2 * np.log(np.diag(cf)))
-            Di = N_inv[ii] - np.matmul(left_mult, np.matmul(S_inv, left_mult.T))
+            Di = N_inv[ii] # - np.matmul(left_mult, np.matmul(S_inv, left_mult.T))
             self.D_inv.append(Di)
 
             self.FDFs.append(np.matmul(self.F[ii].T, np.matmul(Di, self.F[ii])))
             self.FDrs.append(np.matmul(self.F[ii].T, np.matmul(Di, self.r[ii])))
 
             rDrs.append(np.matmul(self.r[ii].T, np.matmul(self.D_inv[ii], self.r[ii])))
-            logdet_E = Mmat[ii].shape[1] * np.log(1e40)
-            logdet_Ds.append(logdet_S + np.sum(np.log(N[ii])) + logdet_E)
+            logdet_E = 0 # Mmat[ii].shape[1] * np.log(1e40)
+            logdet_Ds.append(np.sum(np.log(N[ii])) + logdet_E)
 
         self.lnlikelihood0 = 0
         for ii in range(len(rDrs)):

@@ -104,7 +104,7 @@ def fake_model_1(psrs, rn='uniform'):
     return pta
 
 
-def fake_model_2a(psrs, rn='uniform', crn='uniform'):
+def fake_model_2a(psrs, rn='uniform', crn='uniform', slow=False):
     # Find maximum time span to set GW freq sampling
     tmin = [p.toas.min() for p in psrs]
     tmax = [p.toas.max() for p in psrs]
@@ -148,17 +148,19 @@ def fake_model_2a(psrs, rn='uniform', crn='uniform'):
     # timing model
     tm = gp_signals.TimingModel(use_svd=True)
 
-    
+
     # total model
     s = ef + rn + gw + tm
 
     # initialize PTA
     models = []
-    
+
     for p in psrs:
         models.append(s(p))
-
-    pta = signal_base.PTA(models)
+    if slow:
+        pta = signal_base.PTA(models, lnlikelihood=signal_base.LogLikelihood)
+    else:
+        pta = signal_base.PTA(models, lnlikelihood=signal_base.FastLogLikelihood)
     return pta
 
 

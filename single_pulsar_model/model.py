@@ -22,7 +22,7 @@ def fourier_matrix(toas, num_freqs=30):
 def powerlaw(freqs, log10_A, gamma, ref_freq=3.168808781402895e-08, components=2):
     """
     default ref_freq is 1 / yr in hz
-    components is the number of repititions of freqs
+    components is the number of repetitions of freqs
     """
     df = np.diff(np.concatenate((np.array([0]), freqs[::components])))
     return (
@@ -35,6 +35,7 @@ def phi_matrix(freqs, log10_A_gw, log10_A_rn, gamma_rn, gamma_gw=4.33):
     NO CROSS CORRELATIONS
     """
     rho = powerlaw(freqs, log10_A_gw, gamma_gw)
+    print(rho)
     kappa = powerlaw(freqs, log10_A_rn, gamma_rn)
     phi = rho + kappa
 
@@ -131,6 +132,8 @@ class PulsarLogLikelihood():
 
         self.N_det = logdet_N(self.wnoise_mat_inv)
 
+        print(self.rNr)
+
         self.lnlike = -0.5 * self.rNr - 0.5 * self.N_det
 
         self.b = np.identity(self.tmat.shape[1])
@@ -145,6 +148,7 @@ class PulsarLogLikelihood():
         # phi_total -> basically B but with infinities and phi swapped
         phi = phi_tot_matrix(phi, self.norm_tmatrix)
         # --
+        print(phi)
 
         # 21 microseconds: --
         sigma = make_sigma(self.TNT, phi)
@@ -156,6 +160,7 @@ class PulsarLogLikelihood():
         cf = np.linalg.cholesky(sigma)
         c = np.linalg.solve(cf, self.b)
         sigma_inv = np.dot(c.T, c)
+        # print(sigma_inv)
         # --
         
         # the rest of this takes a small fraction of the total time on average (0.17ms)
@@ -164,7 +169,6 @@ class PulsarLogLikelihood():
 
         # slow mat mul (speed up with scipy.sparse)
         lnlike = self.lnlike + (0.5 * np.dot(self.TNr, np.matmul(sigma_inv, self.TNr)) - 0.5 * (logdet_phi + logdet_sigma))
-
         return lnlike
 
 
